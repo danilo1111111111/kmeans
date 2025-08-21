@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>K-Means Visualization</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #f9f9f9; }
+    #controls { margin: 20px 0; }
+    canvas { background: #fff; border: 1px solid #ccc; margin-top: 20px; }
+    label { margin: 0 10px; }
+    button { margin: 0 10px; padding: 5px 15px; }
+  </style>
+</head>
+<body>
+  <h2>K-Means Clustering Demo</h2>
+  <div id="controls">
+    <label>Clusters (k):
+      <input type="number" id="k" min="2" max="6" value="3">
+    </label>
+    <label>Points:
+      <input type="number" id="points" min="10" max="200" value="50">
+    </label>
+    <button onclick="generateAndRun()">Generate & Run</button>
+  </div>
+  <canvas id="canvas" width="600" height="400"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let points = [], centroids = [], assignments = [];
+    function randomColor(i) {
+      const colors = ['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#ffff33'];
+      return colors[i % colors.length];
+    }
+    function generatePoints(n) {
+      points = [];
+      for (let i = 0; i < n; i++) {
+        points.push({
+          x: Math.random() * (canvas.width - 40) + 20,
+          y: Math.random() * (canvas.height - 40) + 20
+        });
+      }
+    }
+    function generateCentroids(k) {
+      centroids = [];
+      for (let i = 0; i < k; i++) {
+        centroids.push({
+          x: Math.random() * (canvas.width - 40) + 20,
+          y: Math.random() * (canvas.height - 40) + 20
+        });
+      }
+    }
+    function assignPoints() {
+      assignments = [];
+      for (let p of points) {
+        let minDist = Infinity, idx = -1;
+        for (let i = 0; i < centroids.length; i++) {
+          let c = centroids[i];
+          let dist = Math.hypot(p.x - c.x, p.y - c.y);
+          if (dist < minDist) { minDist = dist; idx = i; }
+        }
+        assignments.push(idx);
+      }
+    }
+    function updateCentroids() {
+      let sums = Array(centroids.length).fill().map(() => ({x:0, y:0, count:0}));
+      points.forEach((p, i) => {
+        let idx = assignments[i];
+        sums[idx].x += p.x;
+        sums[idx].y += p.y;
+        sums[idx].count++;
+      });
+      centroids.forEach((c, i) => {
+        if (sums[i].count > 0) {
+          c.x = sums[i].x / sums[i].count;
+          c.y = sums[i].y / sums[i].count;
+        }
+      });
+    }
+    function kmeans(iter=10) {
+      for (let i = 0; i < iter; i++) {
+        assignPoints();
+        updateCentroids();
+      }
+    }
+    function draw() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // Draw dotted lines from points to centroids
+      points.forEach((p, i) => {
+        let c = centroids[assignments[i]];
+        ctx.save();
+        ctx.setLineDash([4,4]);
+        ctx.strokeStyle = randomColor(assignments[i]);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(c.x, c.y);
+        ctx.stroke();
+        ctx.restore();
+      });
+      // Draw points
+      points.forEach((p, i) => {
+        ctx.fillStyle = randomColor(assignments[i]);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 6, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#333';
+        ctx.stroke();
+      });
+      // Draw centroids
+      centroids.forEach((c, i) => {
+        ctx.fillStyle = randomColor(i);
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 12, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      });
+    }
+    function generateAndRun() {
+      let k = Math.max(2, Math.min(6, parseInt(document.getElementById('k').value)));
+      let n = Math.max(10, Math.min(200, parseInt(document.getElementById('points').value)));
+      generatePoints(n);
+      generateCentroids(k);
+      kmeans(15);
+      draw();
+    }
+    // Initial run
+    generateAndRun();
+  </script>
+</body>
+</html>
